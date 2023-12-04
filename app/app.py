@@ -1,16 +1,12 @@
-import json
-
-# import requests
-
+import jsonpickle
+from core.useCases.getAllQuestion import GetAllQuestionHandler, GetAllQuestionRepository
 
 def lambda_handler(event, context):
+    handler = GetAllQuestionHandler(GetAllQuestionRepository())
 
-    print(event)
+    response = handler.handle()
 
     return {
         "statusCode": 200,
-        "body": json.dumps({
-            "message": "hello world",
-            # "location": ip.text.replace("\n", "")
-        }),
+        "body": jsonpickle.encode(response, unpicklable=False),
     }
