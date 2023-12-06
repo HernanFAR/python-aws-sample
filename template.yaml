@@ -5,7 +5,15 @@ Description: >
 
   Sample SAM Template for python-aws-sample
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: The name of the stage to deploy the service
+
 Globals:
   Function:
     Timeout: 15
@@ -15,31 +23,26 @@ Globals:
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+      
+    Environment:
+      Variables:
+        PY_ENV: !Ref Stage
   Api:
     TracingEnabled: true
-
-Parameters:
-  Stage:
-    Type: String
-    Default: dev
-    AllowedValues:
-      - dev
-      - staging
-      - prod
-    Description: The name of the stage to deploy the service
+    Cors:
+      AllowMethods: "'GET, POST, OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+      AllowCredentials: "'*'"
 
 Resources:
   DynamoDbQuestionTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     Properties:
-      TableName: Question-${Stage}
+      TableName: !Sub "Question_${Stage}"
       AttributeDefinitions:
         - AttributeName: id
-          AttributeType: S
-        - AttributeName: title
-          AttributeType: S
-        - AttributeName: detail
           AttributeType: S
       KeySchema:
         - AttributeName: id
@@ -48,6 +51,11 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 0
         WriteCapacityUnits: 0
+
+  HelloWorldApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
 
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -74,6 +82,7 @@ Resources:
           Properties:
             Path: /hello
             Method: get
+            RestApiId: !Ref HelloWorldApi
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
@@ -94,7 +103,7 @@ Outputs:
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   HelloWorldApi:
     Description: API Gateway endpoint URL for Prod stage for Hello World function
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/hello/"
+    Value: !Sub "https://${HelloWorldApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/hello/"
   HelloWorldFunction:
     Description: Hello World Lambda Function ARN
     Value: !GetAtt HelloWorldFunction.Arn
