@@ -26,16 +26,24 @@ class GetAllQuestionContract:
 class GetAllQuestionRepository:
   def __init__(self) -> None:
     self.dynamodb = boto3.resource('dynamodb')
-    self.table = self.dynamodb.Table(f'Questions-{os.getenv("PY-ENV")}')
+    self.table = self.dynamodb.Table(f'Question_{os.getenv("PY_ENV")}')
 
-  def getAll(self) -> List[Question]:
+  def getAll(self) -> GetAllQuestionResponse:
     items = []
     baseResponse = self.table.scan()
     items.extend(baseResponse.get('Items', []))
 
     print(items)
 
-    return []
+    return GetAllQuestionResponse(
+      questions=[
+        Question(
+          id=item.get('id'),
+          name=item.get('name'),
+          detail=item.get('detail'),
+        ) for item in items
+      ]
+    )
 
 
 class GetAllQuestionHandler:
