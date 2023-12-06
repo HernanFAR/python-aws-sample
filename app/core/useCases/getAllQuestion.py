@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import List
+from kink import Container, di, inject
 
 import boto3
 import os
 
+from mypy_boto3_dynamodb import DynamoDBServiceResource
 
 @dataclass(frozen=True)
 class Question:
@@ -23,17 +25,14 @@ class GetAllQuestionContract:
   items: int
 
 
-class GetAllQuestionRepository:
-  def __init__(self) -> None:
-    self.dynamodb = boto3.resource('dynamodb')
-    self.table = self.dynamodb.Table(f'Question_{os.getenv("PY_ENV")}')
+class Repository:
+  def __init__(self, dynamoDb: DynamoDBServiceResource) -> None:
+    self.table = dynamoDb.Table(f'Question_{os.getenv("PY_ENV")}')
 
   def getAll(self) -> GetAllQuestionResponse:
     items = []
     baseResponse = self.table.scan()
     items.extend(baseResponse.get('Items', []))
-
-    print(items)
 
     return GetAllQuestionResponse(
       questions=[
@@ -46,9 +45,16 @@ class GetAllQuestionRepository:
     )
 
 
-class GetAllQuestionHandler:
-  def __init__(self, repository: GetAllQuestionRepository) -> None:
+class Handler:
+  def __init__(self, repository: Repository) -> None:
     self.repository = repository
 
   def handle(self) -> GetAllQuestionResponse:
     return self.repository.getAll()
+
+def define_dependency_container() -> Container:
+  di[DynamoDBServiceResource] = boto3.resource('dynamodb')
+  di[Repository] = lambda di: Repository(di[DynamoDBServiceResource])
+  di[Handler] = lambda di: Handler(di[Repository])
+
+  return di

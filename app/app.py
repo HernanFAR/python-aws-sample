@@ -1,9 +1,10 @@
 import jsonpickle
-from core.useCases.getAllQuestion import GetAllQuestionHandler, GetAllQuestionRepository
+from core.useCases.getAllQuestion import Handler as GetAllQuestionHandler, define_dependency_container as define_get_all_question_dependency_container
 
 def lambda_handler(event, context):
-    handler = GetAllQuestionHandler(GetAllQuestionRepository())
+    container = define_get_all_question_dependency_container()
 
+    handler = container[GetAllQuestionHandler]
     response = handler.handle()
 
     return {
